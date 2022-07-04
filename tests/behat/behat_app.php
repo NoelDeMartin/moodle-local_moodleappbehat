@@ -96,8 +96,9 @@ class behat_app extends behat_app_helper {
     public function i_wait_the_app_to_restart() {
         // Wait window to reload.
         $this->spin(function() {
-            if ($this->runtime_js('hasInitialized()')) {
-                // Behat runtime shouldn't be initialized after reload.
+            $result = $this->js("return !window.behat;");
+
+            if (!$result) {
                 throw new DriverException('Window is not reloading properly.');
             }
 
@@ -114,25 +115,25 @@ class behat_app extends behat_app_helper {
      * @Then /^I should( not)? find (".+")( inside the .+)? in the app$/
      * @param bool $not Whether assert that the element was not found
      * @param string $locator Element locator
-     * @param string $container Container name
+     * @param string $containerName Container name
      */
-    public function i_find_in_the_app(bool $not, string $locator, string $container = '') {
+    public function i_find_in_the_app(bool $not, string $locator, string $containerName = '') {
         $locator = $this->parse_element_locator($locator);
-        if (!empty($container)) {
-            preg_match('/^ inside the (.+)$/', $container, $matches);
-            $container = $matches[1];
+        if (!empty($containerName)) {
+            preg_match('/^ inside the (.+)$/', $containerName, $matches);
+            $containerName = $matches[1];
         }
-        $options = json_encode(['containerName' => $container]);
+        $containerName = json_encode($containerName);
 
-        $this->spin(function() use ($not, $locator, $options) {
-            $result = $this->runtime_js("find($locator, $options)");
+        $this->spin(function() use ($not, $locator, $containerName) {
+            $result = $this->js("return window.behat.find($locator, $containerName);");
 
             if ($not && $result === 'OK') {
-                throw new DriverException('Error, found an element that should not be found');
+                throw new DriverException('Error, found an item that should not be found');
             }
 
             if (!$not && $result !== 'OK') {
-                throw new DriverException('Error finding element - ' . $result);
+                throw new DriverException('Error finding item - ' . $result);
             }
 
             return true;
@@ -151,10 +152,10 @@ class behat_app extends behat_app_helper {
         $locator = $this->parse_element_locator($locator);
 
         $this->spin(function() use ($locator) {
-            $result = $this->runtime_js("scrollTo($locator)");
+            $result = $this->js("return window.behat.scrollTo($locator);");
 
             if ($result !== 'OK') {
-                throw new DriverException('Error finding element - ' . $result);
+                throw new DriverException('Error finding item - ' . $result);
             }
 
             return true;
@@ -174,7 +175,7 @@ class behat_app extends behat_app_helper {
      */
     public function i_load_more_items_in_the_app(bool $not = false) {
         $this->spin(function() use ($not) {
-            $result = $this->runtime_js('loadMoreItems()');
+            $result = $this->js('return await window.behat.loadMoreItems();');
 
             if ($not && $result !== 'ERROR: All items are already loaded.') {
                 throw new DriverException('It should not have been possible to load more items');
@@ -199,7 +200,7 @@ class behat_app extends behat_app_helper {
     public function i_swipe_in_the_app(string $direction) {
         $method = 'swipe' . ucwords($direction);
 
-        $this->runtime_js("getAngularInstance('ion-content', 'CoreSwipeNavigationDirective').$method()");
+        $this->js("window.behat.getAngularInstance('ion-content', 'CoreSwipeNavigationDirective').$method()");
 
         $this->wait_for_pending_js();
 
@@ -218,21 +219,21 @@ class behat_app extends behat_app_helper {
         $locator = $this->parse_element_locator($locator);
 
         $this->spin(function() use ($locator, $not) {
-            $result = $this->runtime_js("isSelected($locator)");
+            $result = $this->js("return window.behat.isSelected($locator);");
 
             switch ($result) {
                 case 'YES':
                     if ($not) {
-                        throw new ExpectationException("Element was selected and shouldn't have", $this->getSession()->getDriver());
+                        throw new ExpectationException("Item was selected and shouldn't have", $this->getSession()->getDriver());
                     }
                     break;
                 case 'NO':
                     if (!$not) {
-                        throw new ExpectationException("Element wasn't selected and should have", $this->getSession()->getDriver());
+                        throw new ExpectationException("Item wasn't selected and should have", $this->getSession()->getDriver());
                     }
                     break;
                 default:
-                    throw new DriverException('Error finding element - ' . $result);
+                    throw new DriverException('Error finding item - ' . $result);
             }
 
             return true;
@@ -325,7 +326,7 @@ class behat_app extends behat_app_helper {
             $this->login($username);
         }
 
-        $mycoursesfound = $this->runtime_js("find({ text: 'My courses', selector: 'ion-tab-button'})");
+        $mycoursesfound = $this->js("return window.behat.find({ text: 'My courses', selector: 'ion-tab-button'});");
 
         if ($mycoursesfound !== 'OK') {
             // My courses not present enter from Dashboard.
@@ -381,7 +382,7 @@ class behat_app extends behat_app_helper {
      */
     public function i_press_the_standard_button_in_the_app(string $button) {
         $this->spin(function() use ($button) {
-            $result = $this->runtime_js("pressStandard('$button')");
+            $result = $this->js("return await window.behat.pressStandard('$button');");
 
             if ($result !== 'OK') {
                 throw new DriverException('Error pressing standard button - ' . $result);
@@ -419,7 +420,7 @@ class behat_app extends behat_app_helper {
             ],
         ]);
 
-        $this->zone_js("pushNotifications.notificationClicked($notification)", true);
+        $this->js("window.behat.notificationClicked($notification)");
         $this->wait_for_pending_js();
     }
 
@@ -507,7 +508,7 @@ class behat_app extends behat_app_helper {
      */
     public function i_close_the_popup_in_the_app() {
         $this->spin(function()  {
-            $result = $this->runtime_js('closePopup()');
+            $result = $this->js("return window.behat.closePopup();");
 
             if ($result !== 'OK') {
                 throw new DriverException('Error closing popup - ' . $result);
@@ -535,7 +536,7 @@ class behat_app extends behat_app_helper {
      * Clicks on / touches something that is visible in the app.
      *
      * Note it is difficult to use the standard 'click on' or 'press' steps because those do not
-     * distinguish visible elements and the app always has many non-visible elements in the DOM.
+     * distinguish visible items and the app always has many non-visible items in the DOM.
      *
      * @Then /^I press (".+") in the app$/
      * @param string $locator Element locator
@@ -545,37 +546,10 @@ class behat_app extends behat_app_helper {
         $locator = $this->parse_element_locator($locator);
 
         $this->spin(function() use ($locator) {
-            $result = $this->runtime_js("press($locator)");
+            $result = $this->js("return await window.behat.press($locator);");
 
             if ($result !== 'OK') {
                 throw new DriverException('Error pressing item - ' . $result);
-            }
-
-            return true;
-        });
-
-        $this->wait_for_pending_js();
-    }
-
-    /**
-     * Checks if elements can be pressed in the app.
-     *
-     * @Then /^I should( not)? be able to press (".+") in the app$/
-     * @param bool $not Whether to assert that the element cannot be pressed
-     * @param string $locator Element locator
-     */
-    public function i_should_be_able_to_press_in_the_app(bool $not, string $locator) {
-        $locator = $this->parse_element_locator($locator);
-
-        $this->spin(function() use ($not, $locator) {
-            $result = $this->runtime_js("find($locator, { onlyClickable: true })");
-
-            if ($not && $result === 'OK') {
-                throw new DriverException('Error, found a clickable element that should not be found');
-            }
-
-            if (!$not && $result !== 'OK') {
-                throw new DriverException('Error finding clickable element - ' . $result);
             }
 
             return true;
@@ -602,23 +576,23 @@ class behat_app extends behat_app_helper {
 
         $this->spin(function() use ($selectedtext, $selected, $locator) {
             // Don't do anything if the item is already in the expected state.
-            $result = $this->runtime_js("isSelected($locator)");
+            $result = $this->js("return window.behat.isSelected($locator);");
 
             if ($result === $selected) {
                 return true;
             }
 
-            // Press element.
-            $result = $this->runtime_js("press($locator)");
+            // Press item.
+            $result = $this->js("return await window.behat.press($locator);");
 
             if ($result !== 'OK') {
-                throw new DriverException('Error pressing element - ' . $result);
+                throw new DriverException('Error pressing item - ' . $result);
             }
 
             // Check that it worked as expected.
             $this->wait_for_pending_js();
 
-            $result = $this->runtime_js("isSelected($locator)");
+            $result = $this->js("return window.behat.isSelected($locator);");
 
             switch ($result) {
                 case 'YES':
@@ -652,7 +626,7 @@ class behat_app extends behat_app_helper {
         $value = addslashes_js($value);
 
         $this->spin(function() use ($field, $value) {
-            $result = $this->runtime_js("setField('$field', '$value')");
+            $result = $this->js("return await window.behat.setField(\"$field\", \"$value\");");
 
             if ($result !== 'OK') {
                 throw new DriverException('Error setting field - ' . $result);
@@ -691,7 +665,7 @@ class behat_app extends behat_app_helper {
      */
     public function the_header_should_be_in_the_app(string $text) {
         $this->spin(function() use ($text) {
-            $result = $this->runtime_js('getHeader()');
+            $result = $this->js('return window.behat.getHeader();');
 
             if (substr($result, 0, 3) !== 'OK:') {
                 throw new DriverException('Error getting header - ' . $result);
@@ -772,7 +746,7 @@ class behat_app extends behat_app_helper {
      * @When I run cron tasks in the app
      */
     public function i_run_cron_tasks_in_the_app() {
-        $this->zone_js('cronDelegate.forceSyncExecution()');
+        $this->js('await window.behat.forceSyncExecution()');
         $this->wait_for_pending_js();
     }
 
@@ -782,7 +756,7 @@ class behat_app extends behat_app_helper {
      * @When I wait loading to finish in the app
      */
     public function i_wait_loading_to_finish_in_the_app() {
-        $this->runtime_js('waitLoadingToFinish()');
+        $this->js('await window.behat.waitLoadingToFinish()');
         $this->wait_for_pending_js();
     }
 
@@ -804,7 +778,7 @@ class behat_app extends behat_app_helper {
             $this->getSession()->switchToWindow($names[1]);
         }
 
-        $this->js('window.close()');
+        $this->js('window.close();');
         $this->getSession()->switchToWindow($names[0]);
     }
 
@@ -816,7 +790,7 @@ class behat_app extends behat_app_helper {
      * @throws DriverException If the navigator.online mode is not available
      */
     public function i_switch_offline_mode(string $offline) {
-        $this->runtime_js("network.setForceOffline($offline)");
+        $this->js("window.behat.network.setForceOffline($offline);");
     }
 
 }

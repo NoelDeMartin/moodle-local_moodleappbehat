@@ -220,9 +220,22 @@ Feature: Test basic usage of comments in app
 
   Scenario: Add comments & Delete comments (blogs)
     # Create blog as a teacher
-    Given the following blog entries exist:
-      | subject   | body      | user     |
-      | Blog test | Blog body | teacher1 |
+    Given the following "blocks" exist:
+      | blockname        | contextlevel | reference | pagetypepattern | defaultregion | configdata |
+      | blog_menu        | Course       | C1        | course-view-*   | site-pre      |            |
+    And I entered the course "Course 1" as "teacher1" in the app
+    And I press "Course summary" in the app
+    # TODO Create and use a generator blog entries.
+    And I press "Open in browser" in the app
+    And I switch to the browser tab opened by the app
+    And I log in as "teacher1"
+    And I click on "Open block drawer" "button"
+    And I click on "Add an entry about this course" "link" in the "Blog menu" "block"
+    And I set the following fields to these values:
+      | Entry title | Blog test |
+      | Blog entry body | Blog body |
+    And I press "Save changes"
+    And I close the browser tab opened by the app
 
     # Create and delete comments as a student
     When I entered the app as "student1"
@@ -250,9 +263,21 @@ Feature: Test basic usage of comments in app
 
   Scenario: Add comments offline & Delete comments offline & Sync comments (blogs)
     # Create blog as a teacher
-    Given the following blog entries exist:
-      | subject   | body      | user     |
-      | Blog test | Blog body | teacher1 |
+    Given the following "blocks" exist:
+      | blockname        | contextlevel | reference | pagetypepattern | defaultregion | configdata |
+      | blog_menu        | Course       | C1        | course-view-*   | site-pre      |            |
+    And I entered the course "Course 1" as "teacher1" in the app
+    And I press "Course summary" in the app
+    And I press "Open in browser" in the app
+    And I switch to the browser tab opened by the app
+    And I log in as "teacher1"
+    And I click on "Open block drawer" "button"
+    And I click on "Add an entry about this course" "link" in the "Blog menu" "block"
+    And I set the following fields to these values:
+      | Entry title | Blog test |
+      | Blog entry body | Blog body |
+    And I press "Save changes"
+    And I close the browser tab opened by the app
 
     # Create and delete comments as a student
     When I entered the app as "student1"
